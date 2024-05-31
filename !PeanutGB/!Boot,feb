@@ -1,0 +1,4 @@
+Set PeanutGB$Dir <Obey$Dir>
+
+Set File$Type_0D7 Gameboy
+Set Alias$@RunType_0D7 /<PeanutGB$Dir>.!Run %%*0

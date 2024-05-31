@@ -1,0 +1,4 @@
+Run <Obey$Dir>.!Boot
+
+WimpSlot -min 128K
+Run <PeanutGB$Dir>.!RunImage %*0

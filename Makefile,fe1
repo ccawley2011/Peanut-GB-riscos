@@ -1,0 +1,33 @@
+# Project:   peanut
+
+
+# Toolflags:
+CCflags = -c -depend !Depend -IC: -throwback
+C++flags = -c -depend !Depend -IC: -throwback
+Linkflags = -aif -c++ -o $@
+ObjAsmflags = -throwback -NoCache -depend !Depend
+CMHGflags = 
+LibFileflags = -c -o $@
+Squeezeflags = -o $@
+ModSqzflags = -o $@
+
+
+# Final targets:
+@.!PeanutGB.!RunImage:   @.o.main @.o.emu @.o.copyasm
+        Link $(Linkflags) @.o.main @.o.emu @.o.copyasm C:o.stubs
+        Squeeze $(Squeezeflags) $@
+
+
+# User-editable dependencies:
+
+# Static dependencies:
+.c.o:
+        CC $(CCflags) -o $@ $<
+.s.o:
+        ObjAsm $(ObjAsmflags) -o $@ $<
+
+.INIT:
+        @CDir o
+
+
+# Dynamic dependencies:
