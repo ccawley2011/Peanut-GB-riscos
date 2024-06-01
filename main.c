@@ -48,7 +48,8 @@ static void setup_fullscreen(uint8_t **fb, size_t *pitch, int mode, int yscale) 
     static const int invars[6] = { 148, 149, 6, 11, 12, -1 };
     int outvars[6];
     _kernel_swi_regs regs;
-    int x, y, i;
+    int x, y;
+    size_t i;
 
     /* Switch to the requested mode */
     _kernel_oswrch(22);
@@ -123,7 +124,7 @@ int main(int argc, char **argv)
 
     if (benchmark)
     {
-        for(unsigned int i = 0; i < 5; i++)
+        for (i = 0; i < 5; i++)
         {
             /* Start benchmark. */
             const uint_fast32_t frames_per_run = 1 * 1024;
