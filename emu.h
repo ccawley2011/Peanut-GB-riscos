@@ -8,6 +8,7 @@
 typedef enum emu_err {
     EMU_OK = 0,
 
+    EMU_UNKNOWN_ERROR,
     EMU_NO_MEMORY,
     EMU_FILE_NOT_FOUND,
     EMU_CARTRIDGE_UNSUPPORTED,

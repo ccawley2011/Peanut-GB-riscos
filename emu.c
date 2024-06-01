@@ -169,8 +169,8 @@ emu_err_t emu_create(emu_state_t **pstate, const char *rom_file_name)
         switch (ret) {
         case GB_INIT_CARTRIDGE_UNSUPPORTED: return EMU_CARTRIDGE_UNSUPPORTED;
         case GB_INIT_INVALID_CHECKSUM: return EMU_INVALID_CHECKSUM;
+        default: return EMU_UNKNOWN_ERROR;
         }
-        return EMU_FILE_NOT_FOUND;
     }
 
     state->cart_ram = malloc(gb_get_save_size(&state->gb));
