@@ -2,8 +2,8 @@
 
 
 # Toolflags:
-CCflags = -c -depend !Depend -IC: -throwback
-C++flags = -c -depend !Depend -IC: -throwback
+CCflags = -c -depend !Depend -IC: -throwback -Otime
+C++flags = -c -depend !Depend -IC: -throwback -Otime
 Linkflags = -aif -c++ -o $@
 ObjAsmflags = -throwback -NoCache -depend !Depend
 CMHGflags = 
