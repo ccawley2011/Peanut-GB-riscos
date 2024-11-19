@@ -12,6 +12,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 
+#include "oslib/osfile.h"
+
 struct emu_state
 {
     struct gb_s gb;
@@ -103,34 +105,27 @@ static void lcd_draw_line(struct gb_s *gb,
  */
 static emu_err_t read_rom_to_ram(const char *file_name, uint8_t **prom)
 {
-    FILE *rom_file;
-    size_t rom_size;
+    os_error *err;
+    int rom_size;
     uint8_t *rom = NULL;
 
     *prom = NULL;
 
-    rom_file = fopen(file_name, "rb");
-    if(!rom_file)
+    err = xosfile_read_stamped(file_name, NULL, NULL, NULL, &rom_size, NULL, NULL);
+    if(err != NULL)
         return EMU_FILE_NOT_FOUND;
-
-    fseek(rom_file, 0, SEEK_END);
-    rom_size = (size_t)ftell(rom_file);
-    rewind(rom_file);
 
     rom = malloc(rom_size);
     if (!rom) {
-        fclose(rom_file);
         return EMU_NO_MEMORY;
     }
 
-    if(fread(rom, sizeof(uint8_t), rom_size, rom_file) != rom_size)
+    err = xosfile_load_stamped_no_path(file_name, rom, NULL, NULL, NULL, NULL, NULL);
+    if(err != NULL)
     {
         free(rom);
-        fclose(rom_file);
         return EMU_FILE_NOT_FOUND;
     }
-
-    fclose(rom_file);
 
     *prom = rom;
     return EMU_OK;

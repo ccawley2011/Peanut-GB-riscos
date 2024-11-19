@@ -2,8 +2,8 @@
 
 
 # Toolflags:
-CCflags = -c -depend !Depend -IC: -throwback -Otime
-C++flags = -c -depend !Depend -IC: -throwback -Otime
+CCflags = -c -depend !Depend -IC:,OSLib: -throwback -Otime
+C++flags = -c -depend !Depend -IC:,OSLib: -throwback -Otime
 Linkflags = -aif -c++ -o $@
 ObjAsmflags = -throwback -NoCache -depend !Depend
 CMHGflags = 
@@ -14,7 +14,7 @@ ModSqzflags = -o $@
 
 # Final targets:
 @.!PeanutGB.!RunImage:   @.o.main @.o.emu @.o.copyasm
-        Link $(Linkflags) @.o.main @.o.emu @.o.copyasm C:o.stubs
+        Link $(Linkflags) @.o.main @.o.emu @.o.copyasm OSLib:o.OSLib32 C:o.stubs
         Squeeze $(Squeezeflags) $@
 
 
