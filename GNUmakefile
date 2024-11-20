@@ -1,14 +1,19 @@
-CC=arm-unknown-riscos-gcc
+CC=$(ARCHIESDK)/tools/bin/arm-archie-gcc
 LD=$(CC)
-AS=asasm
-CFLAGS=-mlibscl -O3 -Wall -Wextra -mno-poke-function-name -fomit-frame-pointer
-LDFLAGS=-mlibscl
+AS=$(ARCHIESDK)/tools/bin/asasm
+OBJCOPY=$(ARCHIESDK)/tools/bin/arm-archie-objcopy
+CFLAGS=-O3 -Wall -Wextra -mno-poke-function-name -fomit-frame-pointer -mno-thumb-interwork
+LDFLAGS=
 
 EXE=!PeanutGB/!RunImage,ff8
-OBJS=main.o emu.o copyasm.o
+ELF=PeanutGB,e1f
+OBJS=main.o emu.o gui.o msgs.o copyasm.o
 
-$(EXE): $(OBJS)
-	$(LD) $(LDFLAGS) -o $@ $^
+$(EXE): $(ELF)
+	$(OBJCOPY) -O binary $< $@
+
+$(ELF): $(OBJS)
+	$(LD) $(LDFLAGS) -o $@ $^ -lOSLib32
 
 clean:
-	$(RM) $(EXE) $(OBJS)
+	$(RM) $(EXE) $(ELF) $(OBJS)

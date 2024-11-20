@@ -136,7 +136,10 @@ int gbmain(int argc, char **argv)
 
             osbyte(osbyte_DISPLAY_SCREEN_BANK, 1, 0);
             printf("Run %u: ", i);
+#ifndef __archie__
             fflush(stdout);
+#endif
+
             osbyte(osbyte_OUTPUT_SCREEN_BANK, 2, 0);
             start_time = clock();
 
