@@ -1,4 +1,5 @@
 #include "emu.h"
+#include "msgs.h"
 
 #define PEANUT_GB_IS_LITTLE_ENDIAN 1
 #define PEANUT_GB_USE_DOUBLE_WIDTH_PALETTE 1
@@ -13,6 +14,7 @@
 #include <stdlib.h>
 
 #include "oslib/osfile.h"
+#include "oslib/wimp.h"
 
 struct emu_state
 {
@@ -28,6 +30,8 @@ struct emu_state
     size_t pitch;
     bool scale;
 };
+
+static os_error err_nomem = { 0, "Out of memory" };
 
 /**
  * Returns a byte from the ROM file at the given address.
@@ -60,20 +64,35 @@ static void gb_cart_ram_write(struct gb_s *gb, const uint_fast32_t addr,
 static void gb_error(struct gb_s *gb, const enum gb_error_e gb_err, const uint16_t val)
 {
     const char* gb_err_str[GB_INVALID_MAX] = {
-        "UNKNOWN",
-        "INVALID OPCODE",
-        "INVALID READ",
-        "INVALID WRITE",
-        "HALT FOREVER"
+        "erruk",
+        "errop",
+        "errrd",
+        "errwr",
+        "errhf"
     };
     emu_state_t *state = gb->direct.priv;
+    os_error err = { 0, "gberr" };
+    char addr[8];
 
-    fprintf(stderr, "Error %d occurred: %s at %04X\n. Exiting.\n",
-                    gb_err, gb_err_str[gb_err], val);
+    sprintf(addr, "%04X", val);
+    xwimp_report_error(msgs_err_lookup_2(&err, msgs_lookup(gb_err_str[gb_err]), addr),
+                       wimp_ERROR_BOX_OK_ICON, msgs_lookup("AppName"), NULL);
 
     /* Free memory and then exit. */
     emu_free(state);
     exit(EXIT_FAILURE);
+}
+
+static os_error *gb_init_error(const enum gb_init_error_e gb_err)
+{
+    const char* gb_err_str[GB_INIT_INVALID_MAX] = {
+        "errul",
+        "errct",
+        "errck"
+    };
+    os_error err = { 0, "lderr" };
+
+    return msgs_err_lookup_1(&err, msgs_lookup(gb_err_str[gb_err]));
 }
 
 #if ENABLE_LCD
@@ -103,51 +122,55 @@ static void lcd_draw_line(struct gb_s *gb,
 /**
  * Returns a pointer to the allocated space containing the ROM. Must be freed.
  */
-static emu_err_t read_rom_to_ram(const char *file_name, uint8_t **prom)
+static os_error *read_rom_to_ram(const char *file_name, uint8_t **prom)
 {
     os_error *err;
+    fileswitch_object_type type;
     int rom_size;
     uint8_t *rom = NULL;
 
     *prom = NULL;
 
-    err = xosfile_read_stamped(file_name, NULL, NULL, NULL, &rom_size, NULL, NULL);
+    err = xosfile_read_stamped(file_name, &type, NULL, NULL, &rom_size, NULL, NULL);
     if(err != NULL)
-        return EMU_FILE_NOT_FOUND;
+        return err;
+
+    if (type != fileswitch_IS_FILE)
+        return xosfile_make_error(file_name, type);
 
     rom = malloc(rom_size);
     if (!rom) {
-        return EMU_NO_MEMORY;
+        return &err_nomem;
     }
 
     err = xosfile_load_stamped_no_path(file_name, rom, NULL, NULL, NULL, NULL, NULL);
     if(err != NULL)
     {
         free(rom);
-        return EMU_FILE_NOT_FOUND;
+        return err;
     }
 
     *prom = rom;
-    return EMU_OK;
+    return NULL;
 }
 
-emu_err_t emu_create(emu_state_t **pstate, const char *rom_file_name)
+os_error *emu_create(emu_state_t **pstate, const char *rom_file_name)
 {
     enum gb_init_error_e ret;
     emu_state_t *state;
-    emu_err_t err;
+    os_error *err;
 
     *pstate = NULL;
 
     state = calloc(1, sizeof(emu_state_t));
     if (!state)
     {
-        return EMU_NO_MEMORY;
+        return &err_nomem;
     }
 
     /* Copy input ROM file to allocated memory. */
     err = read_rom_to_ram(rom_file_name, &state->rom);
-    if(err != EMU_OK)
+    if(err != NULL)
     {
         emu_free(state);
         return err;
@@ -160,19 +183,14 @@ emu_err_t emu_create(emu_state_t **pstate, const char *rom_file_name)
     if(ret != GB_INIT_NO_ERROR)
     {
         emu_free(state);
-
-        switch (ret) {
-        case GB_INIT_CARTRIDGE_UNSUPPORTED: return EMU_CARTRIDGE_UNSUPPORTED;
-        case GB_INIT_INVALID_CHECKSUM: return EMU_INVALID_CHECKSUM;
-        default: return EMU_UNKNOWN_ERROR;
-        }
+        return gb_init_error(ret);
     }
 
     state->cart_ram = malloc(gb_get_save_size(&state->gb));
     if (!state->cart_ram)
     {
         emu_free(state);
-        return EMU_NO_MEMORY;
+        return &err_nomem;
     }
 
 #if ENABLE_LCD
@@ -180,7 +198,7 @@ emu_err_t emu_create(emu_state_t **pstate, const char *rom_file_name)
 #endif
 
     *pstate = state;
-    return EMU_OK;
+    return NULL;
 }
 
 void emu_update(emu_state_t *state, uint8_t *fb, size_t pitch)
@@ -208,6 +226,9 @@ void emu_reset(emu_state_t *state)
 
 void emu_free(emu_state_t *state)
 {
+    if (!state)
+        return;
+
     free(state->cart_ram);
     free(state->rom);
     free(state);

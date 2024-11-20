@@ -52,7 +52,7 @@ static void setup_fullscreen(uint8_t **fb, size_t *pitch, int mode, int yscale) 
         os_VDUVAR_LINE_LENGTH,
         os_VDUVAR_XWIND_LIMIT,
         os_VDUVAR_YWIND_LIMIT,
-        -1
+        os_VDUVAR_END_LIST
     }};
     int outvars[6];
     int x, y;
@@ -73,7 +73,7 @@ static void setup_fullscreen(uint8_t **fb, size_t *pitch, int mode, int yscale) 
     os_writec(os_VDU_CLG);
     osbyte(osbyte_DISPLAY_SCREEN_BANK, 2, 0);
 
-    os_read_vdu_variables((os_vdu_var_list*)&invars, outvars);
+    os_read_vdu_variables((os_vdu_var_list const *)&invars, outvars);
 
     x = ((outvars[3] + 1) - (LCD_WIDTH * 2)) / 2;
     y = ((outvars[4] + 1) - (LCD_HEIGHT * yscale)) / 2;
@@ -83,22 +83,21 @@ static void setup_fullscreen(uint8_t **fb, size_t *pitch, int mode, int yscale) 
     *pitch = outvars[2];
 }
 
-int main(int argc, char **argv)
+int gbmain(int argc, char **argv)
 {
     const char *rom_file_name = NULL;
     emu_state_t *state;
-    emu_err_t err;
+    os_error *err;
     int i;
 
     bool benchmark = false;
-    bool scale = false;
+    bool scale = true;
 
     uint8_t *fb[2];
     size_t pitch;
     int buf = 0;
 
     for (i = 1; i < argc; i++) {
-        printf("argv[%d] = %s\n", i, argv[i]);
         if (strcmp(argv[i], "--benchmark") == 0)
             benchmark = true;
         else if (strcmp(argv[i], "--scale") == 0)
@@ -108,16 +107,15 @@ int main(int argc, char **argv)
     }
 
     if (!rom_file_name) {
-        fprintf(stderr, "Syntax: %s [--benchmark] [--scale] <ROM>\n", argv[0]);
+        printf("Syntax: %s [--benchmark] [--scale] <ROM>\n", argv[0]);
         exit(EXIT_FAILURE);
     } 
 
     err = emu_create(&state, rom_file_name);
 
-    if (err != EMU_OK)
+    if (err != NULL)
     {
-        fprintf(stderr, "Peanut-GB failed to initialise: %d\n",
-                        err);
+        printf("Peanut-GB failed to initialise: %s\n", err->errmess);
         exit(EXIT_FAILURE);
     }
 
@@ -170,7 +168,7 @@ int main(int argc, char **argv)
             osbyte(osbyte_DISPLAY_SCREEN_BANK, buf+1, 0);
             buf ^= 1;
 
-            //osbyte(osbyte_AWAIT_VSYNC, 0, 0);
+            osbyte(osbyte_AWAIT_VSYNC, 0, 0);
         }
     }
 

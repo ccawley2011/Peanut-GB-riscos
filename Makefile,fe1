@@ -13,8 +13,8 @@ ModSqzflags = -o $@
 
 
 # Final targets:
-@.!PeanutGB.!RunImage:   @.o.main @.o.emu @.o.copyasm
-        Link $(Linkflags) @.o.main @.o.emu @.o.copyasm OSLib:o.OSLib32 C:o.stubs
+@.!PeanutGB.!RunImage:   @.o.main @.o.emu @.o.gui @.o.msgs @.o.copyasm
+        Link $(Linkflags) @.o.main @.o.emu @.o.gui @.o.msgs @.o.copyasm C:o.stubs OSLib:o.OSLib32
         Squeeze $(Squeezeflags) $@
 
 

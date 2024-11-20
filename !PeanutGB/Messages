@@ -1,0 +1,17 @@
+AppName:Peanut GB
+
+info:Info
+help:Help
+quit:Quit
+
+gberr:%0 error occurred at address 0x%1. Exiting.
+erruk:UNKNOWN
+errop:INVALID OPCODE
+errrd:INVALID READ
+errwr:INVALID WRITE
+errhf:HALT FOREVER
+
+lderr:Failed to load ROM: %0
+errul:Unknown error
+errct:Cartridge unsupported
+errck:Invalid checksum
