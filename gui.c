@@ -326,6 +326,7 @@ extern int gbmain(int argc, char **argv);
 
 int main(int argc, char **argv)
 {
+    instance_base = NULL;
     quit = FALSE;
 
     msgs_open("<PeanutGB$Dir>.Messages");
