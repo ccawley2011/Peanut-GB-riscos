@@ -4,8 +4,11 @@
 
 static messagetrans_control_block msgs_cb;
 
+os_error err_nomem = { 0, "nomem" };
+
 void msgs_open(const char *file) {
     messagetrans_open_file(&msgs_cb, file, NULL);
+    msgs_err_lookup(&err_nomem);
 }
 
 void msgs_close(void) {

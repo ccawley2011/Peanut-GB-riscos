@@ -185,8 +185,10 @@ bool new_instance(const char *rom_file_name) {
     os_error *err;
 
     instance = calloc(1, sizeof(instance_t));
-    if (!instance)
+    if (!instance) {
+        err = &err_nomem;
         goto cleanup;
+    }
 
     err = emu_create(&instance->state, rom_file_name);
     if (err != NULL)
@@ -195,8 +197,10 @@ bool new_instance(const char *rom_file_name) {
 
     /* TODO: Use mode 9 in the desktop! */
     instance->area = create_sprite(160*2, 144*2, (os_mode)27);
-    if (!instance->area)
+    if (!instance->area) {
+        err = &err_nomem;
         goto cleanup;
+    }
     instance->sprite = (osspriteop_header *)(instance->area + 1);
     instance->id = (osspriteop_id)(instance->sprite);
     instance->pixels = (unsigned char *)(instance->sprite + 1) + (16*8);

@@ -31,8 +31,6 @@ struct emu_state
     bool scale;
 };
 
-static os_error err_nomem = { 0, "Out of memory" };
-
 /**
  * Returns a byte from the ROM file at the given address.
  */

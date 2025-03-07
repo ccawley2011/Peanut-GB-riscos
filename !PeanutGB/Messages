@@ -4,6 +4,8 @@ info:Info
 help:Help
 quit:Quit
 
+nomem:Out of memory
+
 gberr:%0 error occurred at address 0x%1. Exiting.
 erruk:UNKNOWN
 errop:INVALID OPCODE

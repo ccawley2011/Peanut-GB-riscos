@@ -3,6 +3,8 @@
 
 #include "oslib/os.h"
 
+extern os_error err_nomem;
+
 void msgs_open(const char *file);
 void msgs_close(void);
 
