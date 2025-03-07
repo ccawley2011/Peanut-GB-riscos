@@ -17,6 +17,7 @@ static void translate_menu(wimp_menu *menu) {
 
     label = msgs_lookup(menu->title_data.text);
     strncpy(menu->title_data.text, label, 12);
+    menu->title_data.text[11] = 0;
 
     do {
         label = msgs_lookup(entry->data.text);
@@ -150,7 +151,12 @@ void draw_sprite(osspriteop_area *area, osspriteop_id id, int x, int y) {
 
 void update_sprite(osspriteop_area *area, osspriteop_id id, wimp_w window) {
     /* TODO: Unhardcode this! */
-    wimp_draw draw = { window, { 0, 0, 160 << 2, 144 << 2 } };
+    wimp_draw draw;
+    draw.w      = window;
+    draw.box.x0 = 0;
+    draw.box.y0 = 0;
+    draw.box.x1 = 160 << 2;
+    draw.box.y1 = 144 << 2;
 
     osbool more = wimp_update_window(&draw);
     while (more) {
