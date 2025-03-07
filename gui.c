@@ -275,7 +275,7 @@ void gui_run(void)
                     }
                     instance = instance->next;
                 }
-                more = wimp_redraw_window (&(block.redraw));
+                more = wimp_get_rectangle (&(block.redraw));
             }
             }
             break;
