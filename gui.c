@@ -145,12 +145,12 @@ osspriteop_area *create_sprite(int w, int h, os_mode mode) {
 }
 
 void draw_sprite(osspriteop_area *area, osspriteop_id id, int x, int y,
-                 const osspriteop_trans_tab *trans_tab) {
+                 const os_factors *factors, const osspriteop_trans_tab *trans_tab) {
     osspriteop_put_sprite_scaled(osspriteop_PTR, area, id, x, y,
-                                 osspriteop_GIVEN_WIDE_ENTRIES, NULL, trans_tab);
+                                 osspriteop_GIVEN_WIDE_ENTRIES, factors, trans_tab);
 }
 
-void update_sprite(osspriteop_area *area, osspriteop_id id,
+void update_sprite(osspriteop_area *area, osspriteop_id id, const os_factors *factors,
                    const osspriteop_trans_tab *trans_tab, wimp_w window) {
     /* TODO: Unhardcode this! */
     wimp_draw draw;
@@ -162,7 +162,7 @@ void update_sprite(osspriteop_area *area, osspriteop_id id,
 
     osbool more = wimp_update_window(&draw);
     while (more) {
-        draw_sprite(area, id, draw.box.x0, draw.box.y0, trans_tab);
+        draw_sprite(area, id, draw.box.x0, draw.box.y0, factors, trans_tab);
         more = wimp_get_rectangle(&draw);
     }
 }
@@ -182,6 +182,8 @@ typedef struct instance {
     osspriteop_area *area;
     osspriteop_id id;
 
+    int width, height;
+    os_factors factors;
     osspriteop_trans_tab *trans_tab;
 
     unsigned char *pixels;
@@ -195,7 +197,7 @@ bool update_trans_tab(instance_t *instance) {
     int size;
 
     size = colourtrans_generate_table_for_sprite(instance->area, instance->id,
-      (os_mode)-1, (os_palette const *)-1, NULL,
+      os_CURRENT_MODE, (os_palette const *)-1, NULL,
       colourtrans_GIVEN_SPRITE|colourtrans_RETURN_WIDE_ENTRIES, NULL, NULL);
 
     trans_tab = (osspriteop_trans_tab *)malloc(size);
@@ -203,11 +205,29 @@ bool update_trans_tab(instance_t *instance) {
         return false;
 
     colourtrans_generate_table_for_sprite(instance->area, instance->id,
-      (os_mode)-1, (os_palette const *)-1, trans_tab,
+      os_CURRENT_MODE, (os_palette const *)-1, trans_tab,
       colourtrans_GIVEN_SPRITE|colourtrans_RETURN_WIDE_ENTRIES, NULL, NULL);
 
     free(instance->trans_tab);
     instance->trans_tab = trans_tab;
+    return true;
+}
+
+
+bool update_factors(instance_t *instance, os_box *visible) {
+    int width  = visible ? visible->x1 - visible->x0 : instance->width;
+    int height = visible ? visible->y1 - visible->y0 : instance->height;
+    int xeig = 1, yeig = 1;
+
+    os_read_mode_variable(os_CURRENT_MODE, os_MODEVAR_XEIG_FACTOR, &xeig);
+    os_read_mode_variable(os_CURRENT_MODE, os_MODEVAR_YEIG_FACTOR, &yeig);
+
+    instance->factors.xmul = width>>xeig;
+    instance->factors.ymul = height>>yeig;
+    instance->factors.xdiv = 160<<1;
+    instance->factors.ydiv = 144;
+    instance->width  = width;
+    instance->height = height;
     return true;
 }
 
@@ -226,10 +246,10 @@ bool new_instance(const char *rom_file_name) {
     err = emu_create(&instance->state, rom_file_name);
     if (err != NULL)
         goto cleanup;
-    emu_set_option(instance->state, EMU_OPTION_SCALE, true);
+    emu_set_option(instance->state, EMU_OPTION_SCALE, false);
 
-    /* TODO: Use mode 9 in the desktop! */
-    instance->area = create_sprite(160*2, 144*2, (os_mode)27);
+    /* TODO: Use mode 9 in the desktop? */
+    instance->area = create_sprite(160*2, 144, os_MODE4BPP90X45);
     if (!instance->area) {
         err = &err_nomem;
         goto cleanup;
@@ -238,11 +258,14 @@ bool new_instance(const char *rom_file_name) {
     instance->id = (osspriteop_id)(sprite);
     instance->pixels = (unsigned char *)(sprite + 1) + (16*8);
     instance->pitch = 160;
+    instance->width = 160<<2;
+    instance->height = 144<<2;
 
     colourtrans_write_palette(instance->area, instance->id,
                               (os_palette const *)&default_palette,
                               colourtrans_PALETTE_FOR_SPRITE);
     update_trans_tab(instance);
+    update_factors(instance, NULL);
 
     instance->w = create_window_from_template(&instance->data, "main");
     open_window(instance->w);
@@ -291,7 +314,7 @@ void gui_run(void)
             next_update = clock() + (CLOCKS_PER_SEC/60);
             while (instance) {
                 emu_update(instance->state, instance->pixels, instance->pitch);
-                update_sprite(instance->area, instance->id, instance->trans_tab, instance->w);
+                update_sprite(instance->area, instance->id, &instance->factors, instance->trans_tab, instance->w);
                 instance = instance->next;
             }
             }
@@ -303,7 +326,7 @@ void gui_run(void)
                 instance_t *instance = instance_base;
                 while (instance) {
                     if (block.redraw.w == instance->w) {
-                        draw_sprite(instance->area, instance->id, block.redraw.box.x0, block.redraw.box.y0, instance->trans_tab);
+                        draw_sprite(instance->area, instance->id, block.redraw.box.x0, block.redraw.box.y0, &instance->factors, instance->trans_tab);
                         break;
                     }
                     instance = instance->next;
@@ -313,8 +336,17 @@ void gui_run(void)
             }
             break;
 
-        case wimp_OPEN_WINDOW_REQUEST:
+        case wimp_OPEN_WINDOW_REQUEST: {
+            instance_t *instance = instance_base;
+            while (instance) {
+                if (block.open.w == instance->w) {
+                    update_factors(instance, &(block.open.visible));
+                    break;
+                }
+                instance = instance->next;
+            }
             wimp_open_window(&(block.open));
+            }
             break;
 
         case wimp_CLOSE_WINDOW_REQUEST:
@@ -343,6 +375,7 @@ void gui_run(void)
                     instance_t *instance = instance_base;
                     while (instance) {
                         update_trans_tab(instance);
+                        update_factors(instance, NULL);
                         instance = instance->next;
                     }
                 }
