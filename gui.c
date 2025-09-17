@@ -193,20 +193,25 @@ static instance_t *instance_base = NULL;
 
 
 bool update_trans_tab(instance_t *instance) {
+    colourtrans_table_flags flags = colourtrans_GIVEN_SPRITE;
     osspriteop_trans_tab *trans_tab;
-    int size;
+    int log2bpp, size;
+
+    os_read_mode_variable(os_CURRENT_MODE, os_MODEVAR_LOG2_BPP, &log2bpp);
+    if (log2bpp > 3)
+        flags |= colourtrans_RETURN_WIDE_ENTRIES;
 
     size = colourtrans_generate_table_for_sprite(instance->area, instance->id,
-      os_CURRENT_MODE, (os_palette const *)-1, NULL,
-      colourtrans_GIVEN_SPRITE|colourtrans_RETURN_WIDE_ENTRIES, NULL, NULL);
+      os_CURRENT_MODE, colourtrans_CURRENT_PALETTE,
+      NULL, flags, NULL, NULL);
 
     trans_tab = (osspriteop_trans_tab *)malloc(size);
     if (!trans_tab)
         return false;
 
     colourtrans_generate_table_for_sprite(instance->area, instance->id,
-      os_CURRENT_MODE, (os_palette const *)-1, trans_tab,
-      colourtrans_GIVEN_SPRITE|colourtrans_RETURN_WIDE_ENTRIES, NULL, NULL);
+      os_CURRENT_MODE, colourtrans_CURRENT_PALETTE,
+      trans_tab, flags, NULL, NULL);
 
     free(instance->trans_tab);
     instance->trans_tab = trans_tab;
