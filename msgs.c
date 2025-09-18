@@ -1,18 +1,39 @@
 #include "msgs.h"
 
+#include <stdlib.h>
+
 #include "oslib/messagetrans.h"
 
 static messagetrans_control_block msgs_cb;
+static void *msgs_buf = NULL;
 
 os_error err_nomem = { 0, "nomem" };
 
-void msgs_open(const char *file) {
-    messagetrans_open_file(&msgs_cb, file, NULL);
+os_error *msgs_open(const char *file) {
+    os_error *err;
+    int size;
+
+    err = xmessagetrans_file_info(file, NULL, &size);
+    if (err != NULL)
+        return err;
+
+    msgs_buf = malloc(size);
+    if (!msgs_buf)
+        return &err_nomem;
+
+    err = xmessagetrans_open_file(&msgs_cb, file, msgs_buf);
+    if (err != NULL) {
+        free(msgs_buf);
+        return err;
+    }
+
     msgs_err_lookup(&err_nomem);
+    return NULL;
 }
 
 void msgs_close(void) {
     messagetrans_close_file(&msgs_cb);
+    free(msgs_buf);
 }
 
 const char *msgs_lookup(const char *token, int *used) {

@@ -105,7 +105,7 @@ int gbmain(int argc, char **argv)
 
     if (!rom_file_name) {
         printf("Syntax: %s [--scale] <ROM>\n", argv[0]);
-        exit(EXIT_FAILURE);
+        return EXIT_FAILURE;
     }
 
     err = emu_create(&state, rom_file_name);
@@ -113,7 +113,7 @@ int gbmain(int argc, char **argv)
     if (err != NULL)
     {
         printf("Peanut-GB failed to initialise: %s\n", err->errmess);
-        exit(EXIT_FAILURE);
+        return EXIT_FAILURE;
     }
 
     if (scale)

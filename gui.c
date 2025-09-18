@@ -437,13 +437,22 @@ extern int gbmain(int argc, char **argv);
 
 int main(int argc, char **argv)
 {
+    os_error *err;
     instance_base = NULL;
     quit = FALSE;
 
-    msgs_open("<PeanutGB$Dir>.Messages");
+    err = msgs_open("<PeanutGB$Dir>.Messages");
+    if (err != NULL) {
+        xwimp_report_error(err, wimp_ERROR_BOX_OK_ICON, "Peanut GB", NULL);
+        return EXIT_FAILURE;
+    }
 
     if (argc > 1) {
-        gbmain(argc, argv);
+        int retval = gbmain(argc, argv);
+
+        msgs_close();
+
+        return retval;
     } else {
         wimp_initialise(wimp_VERSION_RO2, msgs_lookup("AppName", NULL), NULL, NULL);
 
@@ -455,9 +464,9 @@ int main(int argc, char **argv)
 
         wimp_close_template();
         wimp_close_down(0);
+
+        msgs_close();
+
+        return EXIT_SUCCESS;
     }
-
-    msgs_close();
-
-    return 0;
 }

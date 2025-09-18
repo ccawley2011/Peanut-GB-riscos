@@ -5,7 +5,7 @@
 
 extern os_error err_nomem;
 
-void msgs_open(const char *file);
+os_error *msgs_open(const char *file);
 void msgs_close(void);
 
 const char *msgs_lookup(const char *token, int *used);
