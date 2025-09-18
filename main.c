@@ -90,7 +90,6 @@ int gbmain(int argc, char **argv)
     os_error *err;
     int i;
 
-    bool benchmark = false;
     bool scale = true;
 
     uint8_t *fb[2];
@@ -98,18 +97,16 @@ int gbmain(int argc, char **argv)
     int buf = 0;
 
     for (i = 1; i < argc; i++) {
-        if (strcmp(argv[i], "--benchmark") == 0)
-            benchmark = true;
-        else if (strcmp(argv[i], "--scale") == 0)
+        if (strcmp(argv[i], "--scale") == 0)
             scale = true;
         else
             rom_file_name = argv[i];
     }
 
     if (!rom_file_name) {
-        printf("Syntax: %s [--benchmark] [--scale] <ROM>\n", argv[0]);
+        printf("Syntax: %s [--scale] <ROM>\n", argv[0]);
         exit(EXIT_FAILURE);
-    } 
+    }
 
     err = emu_create(&state, rom_file_name);
 
@@ -125,59 +122,19 @@ int gbmain(int argc, char **argv)
         setup_fullscreen(fb, &pitch, 12, 1);
     emu_set_option(state, EMU_OPTION_SCALE, scale);
 
-    if (benchmark)
+    osbyte(osbyte_VAR_ESCAPE_STATE, 1, 0);
+
+    while(emu_poll_input(state))
     {
-        for (i = 0; i < 5; i++)
-        {
-            /* Start benchmark. */
-            const uint_fast32_t frames_per_run = 1 * 1024;
-            clock_t start_time, end_time;
-            uint_fast32_t frames = 0;
+        osbyte(osbyte_OUTPUT_SCREEN_BANK, buf+1, 0);
+        emu_update(state, fb[buf], pitch);
+        osbyte(osbyte_DISPLAY_SCREEN_BANK, buf+1, 0);
+        buf ^= 1;
 
-            osbyte(osbyte_DISPLAY_SCREEN_BANK, 1, 0);
-            printf("Run %u: ", i);
-#ifndef __archie__
-            fflush(stdout);
-#endif
-
-            osbyte(osbyte_OUTPUT_SCREEN_BANK, 2, 0);
-            start_time = clock();
-
-            do
-            {
-                /* Execute CPU cycles until the screen has to be
-                 * redrawn. */
-                emu_update(state, fb[1], pitch);
-            }
-            while(++frames < frames_per_run);
-
-            end_time = clock();
-            osbyte(osbyte_OUTPUT_SCREEN_BANK, 1, 0);
-
-            {
-                double duration =
-                        (double)(end_time - start_time) / CLOCKS_PER_SEC;
-                double fps = frames / duration;
-                printf("%f FPS, dur: %f\n", fps, duration);
-            }
-
-            emu_reset(state);
-        }
-    } else {
-        osbyte(osbyte_VAR_ESCAPE_STATE, 1, 0);
-
-        while(emu_poll_input(state))
-        {
-            osbyte(osbyte_OUTPUT_SCREEN_BANK, buf+1, 0);
-            emu_update(state, fb[buf], pitch);
-            osbyte(osbyte_DISPLAY_SCREEN_BANK, buf+1, 0);
-            buf ^= 1;
-
-            osbyte(osbyte_AWAIT_VSYNC, 0, 0);
-        }
-
-        osbyte(osbyte_VAR_ESCAPE_STATE, 0, 0);
+        osbyte(osbyte_AWAIT_VSYNC, 0, 0);
     }
+
+    osbyte(osbyte_VAR_ESCAPE_STATE, 0, 0);
 
     emu_free(state);
     return EXIT_SUCCESS;

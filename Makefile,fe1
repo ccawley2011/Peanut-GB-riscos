@@ -17,6 +17,10 @@ ModSqzflags = -o $@
         Link $(Linkflags) @.o.main @.o.emu @.o.gui @.o.msgs @.o.copyasm C:o.stubs OSLib:o.OSLib32
         Squeeze $(Squeezeflags) $@
 
+@.bench:   @.o.bench
+        Link $(Linkflags) @.o.bench C:o.stubs
+        Squeeze $(Squeezeflags) $@
+
 
 # User-editable dependencies:
 
