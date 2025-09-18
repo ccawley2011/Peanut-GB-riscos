@@ -13,6 +13,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 
+#include "oslib/osbyte.h"
 #include "oslib/osfile.h"
 #include "oslib/wimp.h"
 
@@ -197,6 +198,60 @@ os_error *emu_create(emu_state_t **pstate, const char *rom_file_name)
 
     *pstate = state;
     return NULL;
+}
+
+bool emu_poll_input(emu_state_t *state)
+{
+    int key = osbyte1(osbyte_SCAN_KEYBOARD_LIMITED, 0, 0);
+    uint8_t joypad = 0;
+    bool escape = false;
+
+    /* Scan the keyboard to see what is pressed */
+    while (key < 0xff)
+    {
+        switch (key) {
+        case 97:  /* Z */
+        case 55:  /* P */
+            joypad |= JOYPAD_A;
+            break;
+        case 66:  /* X */
+        case 86:  /* L */
+            joypad |= JOYPAD_B;
+            break;
+        case 47:  /* Backspace */
+            joypad |= JOYPAD_SELECT;
+            break;
+        case 73:  /* Return */
+            joypad |= JOYPAD_START;
+            break;
+        case 121: /* Right */
+        case 50:  /* D */
+            joypad |= JOYPAD_RIGHT;
+            break;
+        case 25:  /* Left */
+        case 65:  /* A */
+            joypad |= JOYPAD_LEFT;
+            break;
+        case 57:  /* Up */
+        case 33:  /* W */
+            joypad |= JOYPAD_UP;
+            break;
+        case 41:  /* Down */
+        case 81:  /* S */
+            joypad |= JOYPAD_DOWN;
+            break;
+        case 112: /* Escape */
+            escape = true;
+            break;
+        default:
+            break;
+        }
+
+        key = osbyte1(osbyte_SCAN_KEYBOARD, key + 1, 0);
+    }
+
+    state->gb.direct.joypad = ~joypad;
+    return !escape;
 }
 
 void emu_update(emu_state_t *state, uint8_t *fb, size_t pitch)

@@ -164,7 +164,9 @@ int gbmain(int argc, char **argv)
             emu_reset(state);
         }
     } else {
-        while(1)
+        osbyte(osbyte_VAR_ESCAPE_STATE, 1, 0);
+
+        while(emu_poll_input(state))
         {
             osbyte(osbyte_OUTPUT_SCREEN_BANK, buf+1, 0);
             emu_update(state, fb[buf], pitch);
@@ -173,6 +175,8 @@ int gbmain(int argc, char **argv)
 
             osbyte(osbyte_AWAIT_VSYNC, 0, 0);
         }
+
+        osbyte(osbyte_VAR_ESCAPE_STATE, 0, 0);
     }
 
     emu_free(state);

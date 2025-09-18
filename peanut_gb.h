@@ -241,6 +241,16 @@
 #define OBJ_FLIP_X          0x20
 #define OBJ_PALETTE         0x10
 
+/* Joypad buttons */
+#define JOYPAD_A            0x01
+#define JOYPAD_B            0x02
+#define JOYPAD_SELECT       0x04
+#define JOYPAD_START        0x08
+#define JOYPAD_RIGHT        0x10
+#define JOYPAD_LEFT         0x20
+#define JOYPAD_UP           0x40
+#define JOYPAD_DOWN         0x80
+
 #define ROM_HEADER_CHECKSUM_LOC	0x014D
 
 /* Local macros. */
@@ -705,25 +715,25 @@ struct gb_s
 		bool interlace : 1;
 		bool frame_skip : 1;
 
-#ifndef __CC_NORCROFT
 		union
 		{
 			struct
 			{
-				uint8_t a	: 1;
-				uint8_t b	: 1;
-				uint8_t select	: 1;
-				uint8_t start	: 1;
-				uint8_t right	: 1;
-				uint8_t left	: 1;
-				uint8_t up	: 1;
-				uint8_t down	: 1;
+				/* Using this bitfield is deprecated due to
+				 * portability concerns. It is recommended to
+				 * use the JOYPAD_* defines instead.
+				 */
+				bool a		: 1;
+				bool b		: 1;
+				bool select	: 1;
+				bool start	: 1;
+				bool right	: 1;
+				bool left	: 1;
+				bool up		: 1;
+				bool down	: 1;
 			} joypad_bits;
 			uint8_t joypad;
 		};
-#else
-		uint8_t joypad;
-#endif
 
 		/* Implementation defined data. Set to NULL if not required. */
 		void *priv;

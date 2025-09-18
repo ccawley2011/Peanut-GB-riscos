@@ -190,6 +190,7 @@ typedef struct instance {
     size_t pitch;
 } instance_t;
 static instance_t *instance_base = NULL;
+static instance_t *instance_focus = NULL;
 
 
 bool update_trans_tab(instance_t *instance) {
@@ -275,6 +276,9 @@ bool new_instance(const char *rom_file_name) {
     instance->w = create_window_from_template(&instance->data, "main");
     open_window(instance->w);
 
+    wimp_set_caret_position(instance->w, wimp_ICON_WINDOW,
+                            0, 0, 1 << 25, 0);
+
     instance->next = instance_base;
     instance_base = instance;
 
@@ -293,6 +297,17 @@ cleanup:
         free(instance);
     }
     return false;
+}
+
+
+instance_t *get_instance(wimp_w w) {
+    instance_t *instance = instance_base;
+    while (instance) {
+        if (w == instance->w)
+            return instance;
+        instance = instance->next;
+    }
+    return NULL;
 }
 
 
@@ -318,6 +333,8 @@ void gui_run(void)
             instance_t *instance = instance_base;
             next_update = clock() + (CLOCKS_PER_SEC/60);
             while (instance) {
+                if (instance == instance_focus)
+                    emu_poll_input(instance->state);
                 emu_update(instance->state, instance->pixels, instance->pitch);
                 update_sprite(instance->area, instance->id, &instance->factors, instance->trans_tab, instance->w);
                 instance = instance->next;
@@ -328,13 +345,9 @@ void gui_run(void)
         case wimp_REDRAW_WINDOW_REQUEST: {
             osbool more = wimp_redraw_window (&(block.redraw));
             while (more) {
-                instance_t *instance = instance_base;
-                while (instance) {
-                    if (block.redraw.w == instance->w) {
-                        draw_sprite(instance->area, instance->id, block.redraw.box.x0, block.redraw.box.y0, &instance->factors, instance->trans_tab);
-                        break;
-                    }
-                    instance = instance->next;
+                instance_t *instance = get_instance(block.redraw.w);
+                if (instance) {
+                    draw_sprite(instance->area, instance->id, block.redraw.box.x0, block.redraw.box.y0, &instance->factors, instance->trans_tab);
                 }
                 more = wimp_get_rectangle (&(block.redraw));
             }
@@ -342,13 +355,9 @@ void gui_run(void)
             break;
 
         case wimp_OPEN_WINDOW_REQUEST: {
-            instance_t *instance = instance_base;
-            while (instance) {
-                if (block.open.w == instance->w) {
-                    update_factors(instance, &(block.open.visible));
-                    break;
-                }
-                instance = instance->next;
+            instance_t *instance = get_instance(block.open.w);
+            if (instance) {
+                update_factors(instance, &(block.open.visible));
             }
             wimp_open_window(&(block.open));
             }
@@ -360,13 +369,33 @@ void gui_run(void)
             break;
 
         case wimp_MOUSE_CLICK:
-            if (block.pointer.w == wimp_ICON_BAR)
+            if (block.pointer.w == wimp_ICON_BAR) {
                 ibar_mouse_click(&(block.pointer));
-           break;
+            } else {
+                instance_t *instance = get_instance(block.pointer.w);
+                if (instance) {
+                    wimp_set_caret_position(instance->w, wimp_ICON_WINDOW,
+                                            0, 0, 1 << 25, 0);
+                }
+            }
+            break;
 
         case wimp_MENU_SELECTION:
             /* TODO: Add menu for instances */
             ibar_menu_click(&(block.selection));
+            break;
+
+        case wimp_LOSE_CARET:
+            if (instance_focus && instance_focus->w == block.caret.w)
+                instance_focus = NULL;
+            break;
+
+        case wimp_GAIN_CARET: {
+            instance_t *instance = get_instance(block.caret.w);
+            if (instance) {
+                instance_focus = instance;
+            }
+            }
             break;
 
         case wimp_USER_MESSAGE:
