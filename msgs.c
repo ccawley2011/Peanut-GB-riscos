@@ -15,8 +15,8 @@ void msgs_close(void) {
     messagetrans_close_file(&msgs_cb);
 }
 
-const char *msgs_lookup(const char *token) {
-    return messagetrans_lookup (&msgs_cb, token, NULL, 0, NULL, NULL, NULL, NULL, NULL);
+const char *msgs_lookup(const char *token, int *used) {
+    return messagetrans_lookup (&msgs_cb, token, NULL, 0, NULL, NULL, NULL, NULL, used);
 }
 
 os_error *msgs_err_lookup(os_error *err) {

@@ -8,7 +8,7 @@ extern os_error err_nomem;
 void msgs_open(const char *file);
 void msgs_close(void);
 
-const char *msgs_lookup(const char *token);
+const char *msgs_lookup(const char *token, int *used);
 
 os_error *msgs_err_lookup(os_error *err);
 os_error *msgs_err_lookup_1(os_error *err, const char *arg0);

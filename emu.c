@@ -74,8 +74,8 @@ static void gb_error(struct gb_s *gb, const enum gb_error_e gb_err, const uint16
     char addr[8];
 
     sprintf(addr, "%04X", val);
-    xwimp_report_error(msgs_err_lookup_2(&err, msgs_lookup(gb_err_str[gb_err]), addr),
-                       wimp_ERROR_BOX_OK_ICON, msgs_lookup("AppName"), NULL);
+    xwimp_report_error(msgs_err_lookup_2(&err, msgs_lookup(gb_err_str[gb_err], NULL), addr),
+                       wimp_ERROR_BOX_OK_ICON, msgs_lookup("AppName", NULL), NULL);
 
     /* Free memory and then exit. */
     emu_free(state);
@@ -91,7 +91,7 @@ static os_error *gb_init_error(const enum gb_init_error_e gb_err)
     };
     os_error err = { 0, "lderr" };
 
-    return msgs_err_lookup_1(&err, msgs_lookup(gb_err_str[gb_err]));
+    return msgs_err_lookup_1(&err, msgs_lookup(gb_err_str[gb_err], NULL));
 }
 
 #if ENABLE_LCD

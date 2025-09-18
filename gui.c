@@ -14,17 +14,20 @@ static osbool quit = FALSE;
 static void translate_menu(wimp_menu *menu) {
     wimp_menu_entry *entry = menu->entries;
     const char *label;
+    int label_used;
 
-    label = msgs_lookup(menu->title_data.text);
-    strncpy(menu->title_data.text, label, 12);
-    menu->title_data.text[11] = 0;
+    label = msgs_lookup(menu->title_data.text, &label_used);
+    if (label_used > 11)
+        label_used = 11;
+    memcpy(menu->title_data.text, label, label_used);
+    menu->title_data.text[label_used] = 0;
 
     do {
-        label = msgs_lookup(entry->data.text);
+        label = msgs_lookup(entry->data.text, &label_used);
 
         entry->data.indirected_text.text = (char *)label;
         entry->data.indirected_text.validation = NULL;
-        entry->data.indirected_text.size = strlen(label);
+        entry->data.indirected_text.size = label_used;
 
         entry->icon_flags |= wimp_ICON_INDIRECTED;
     } while (!((entry++)->menu_flags & wimp_MENU_LAST));
@@ -285,7 +288,7 @@ bool new_instance(const char *rom_file_name) {
 
 cleanup:
     if (err) {
-        xwimp_report_error(err, wimp_ERROR_BOX_OK_ICON, msgs_lookup("AppName"), NULL);
+        xwimp_report_error(err, wimp_ERROR_BOX_OK_ICON, msgs_lookup("AppName", NULL), NULL);
     }
     if (instance) {
         /* TODO: Delete the window! */
@@ -442,7 +445,7 @@ int main(int argc, char **argv)
     if (argc > 1) {
         gbmain(argc, argv);
     } else {
-        wimp_initialise(wimp_VERSION_RO2, msgs_lookup("AppName"), NULL, NULL);
+        wimp_initialise(wimp_VERSION_RO2, msgs_lookup("AppName", NULL), NULL, NULL);
 
         wimp_open_template("<PeanutGB$Dir>.Templates");
 
