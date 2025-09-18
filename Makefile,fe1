@@ -25,13 +25,24 @@ ModSqzflags = -o $@
 # User-editable dependencies:
 
 # Static dependencies:
+.SUFFIXES: .c .i .o .s
+
 .c.o:
         CC $(CCflags) -o $@ $<
-.s.o:
+o.copyasm: i.copyasm
         ObjAsm $(ObjAsmflags) -o $@ $<
+i.copyasm: s.copyasm
+        CC $(CCflags) -E $< > $@
 
 .INIT:
+        @CDir i
         @CDir o
+
+clean:
+        X Delete !PeanutGB.!RunImage
+        X Delete bench
+        X Wipe i FR~C~V
+        X Wipe o FR~C~V
 
 
 # Dynamic dependencies:

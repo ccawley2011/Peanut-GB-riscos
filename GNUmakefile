@@ -1,8 +1,9 @@
 CC=$(ARCHIESDK)/tools/bin/arm-archie-gcc
+AS=$(CC)
 LD=$(CC)
-AS=$(ARCHIESDK)/tools/bin/asasm
 OBJCOPY=$(ARCHIESDK)/tools/bin/arm-archie-objcopy
 CFLAGS=-O3 -Wall -Wextra -mno-poke-function-name -fomit-frame-pointer -mno-thumb-interwork
+ASFLAGS= -x assembler-with-cpp -c
 LDFLAGS=
 
 EXE=!PeanutGB/!RunImage,ff8
