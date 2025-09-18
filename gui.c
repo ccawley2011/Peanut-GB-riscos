@@ -1,6 +1,5 @@
 #include <stdlib.h>
 #include <string.h>
-#include <time.h>
 
 #include "oslib/colourtrans.h"
 #include "oslib/wimp.h"
@@ -318,12 +317,12 @@ void gui_run(void)
 {
     wimp_block block;
     wimp_event_no reason;
-    clock_t next_update = clock() + (CLOCKS_PER_SEC/60);
+    os_t next_update = os_read_monotonic_time() + (100/60);
 
     while (!quit) {
-        clock_t t = next_update - clock();
-        if (t > 0)
-            reason = wimp_poll_idle (0, &block, t, NULL);
+        os_t t = os_read_monotonic_time();
+        if (t < next_update)
+            reason = wimp_poll_idle (0, &block, next_update, NULL);
         else
             reason = wimp_poll(0, &block, NULL);
 
@@ -331,7 +330,7 @@ void gui_run(void)
         case wimp_NULL_REASON_CODE: {
             /* TODO: Implement timing correctly! */
             instance_t *instance = instance_base;
-            next_update = clock() + (CLOCKS_PER_SEC/60);
+            next_update = os_read_monotonic_time() + (100/60);
             while (instance) {
                 if (instance == instance_focus)
                     emu_poll_input(instance->state);
