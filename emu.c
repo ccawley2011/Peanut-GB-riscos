@@ -254,22 +254,14 @@ bool emu_poll_input(emu_state_t *state)
     return !escape;
 }
 
-void emu_update(emu_state_t *state, uint8_t *fb, size_t pitch)
+void emu_update(emu_state_t *state, uint8_t *fb, size_t pitch, osbool scale)
 {
     state->fb = fb;
     state->pitch = pitch;
+    state->scale = scale;
 
     /* Execute CPU cycles until the screen has to be redrawn. */
     gb_run_frame(&state->gb);
-}
-
-void emu_set_option(emu_state_t *state, emu_option_t opt, bool val)
-{
-    switch (opt) {
-    case EMU_OPTION_SCALE:
-        state->scale = val;
-        break;
-    }
 }
 
 void emu_reset(emu_state_t *state)

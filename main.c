@@ -1,4 +1,5 @@
 #include "emu.h"
+#include "msgs.h"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -7,6 +8,7 @@
 
 #include "oslib/os.h"
 #include "oslib/osbyte.h"
+#include "oslib/wimp.h"
 
 #define LCD_WIDTH 160
 #define LCD_HEIGHT 144
@@ -45,7 +47,19 @@ static const unsigned char vdu_setup[] = {
     os_VDU_SET_GCOL, 0, 0x8F
 };
 
-static void setup_fullscreen(uint8_t **fb, size_t *pitch, int mode, int yscale) {
+static os_error *check_mode(int mode) {
+    os_error err = { 0, "nomode" };
+    char modestr[8];
+
+    if (os_check_mode_valid((os_mode)mode, NULL, NULL) & _C) {
+        os_convert_integer1(mode, modestr, sizeof(modestr));
+        return msgs_err_lookup_1(&err, modestr);
+    }
+
+    return NULL;
+}
+
+os_error *run_fullscreen(emu_state_t *state, osbool vga) {
     static const os_VDU_VAR_LIST(6) invars = {{
         os_VDUVAR_SCREEN_START,
         os_VDUVAR_DISPLAY_START,
@@ -54,9 +68,23 @@ static void setup_fullscreen(uint8_t **fb, size_t *pitch, int mode, int yscale) 
         os_VDUVAR_YWIND_LIMIT,
         os_VDUVAR_END_LIST
     }};
+    int old_esc, old_fn;
+    int mode = vga ? 27 : 12;
+    int oldmode;
     int outvars[6];
+    uint8_t *fb[2];
+    os_error *err;
+    size_t pitch;
+    int buf = 0;
     int x, y;
     size_t i;
+
+    err = check_mode(mode);
+    if (err) {
+        return err;
+    }
+
+    oldmode = osbyte2(135, 0, 255);
 
     /* Switch to the requested mode */
     os_writec(os_VDU_SET_MODE);
@@ -75,67 +103,34 @@ static void setup_fullscreen(uint8_t **fb, size_t *pitch, int mode, int yscale) 
 
     os_read_vdu_variables((os_vdu_var_list const *)&invars, outvars);
 
+    /* Centre the image on the screen */
     x = ((outvars[3] + 1) - (LCD_WIDTH * 2)) / 2;
-    y = ((outvars[4] + 1) - (LCD_HEIGHT * yscale)) / 2;
+    if (vga)
+        y = ((outvars[4] + 1) - (LCD_HEIGHT * 2)) / 2;
+    else
+        y = ((outvars[4] + 1) - (LCD_HEIGHT * 1)) / 2;
 
     fb[0] = (uint8_t *)outvars[0] + (y * outvars[2]) + (x / 2);
     fb[1] = (uint8_t *)outvars[1] + (y * outvars[2]) + (x / 2);
-    *pitch = outvars[2];
-}
+    pitch = outvars[2];
 
-int gbmain(int argc, char **argv)
-{
-    const char *rom_file_name = NULL;
-    emu_state_t *state;
-    os_error *err;
-    int i;
-
-    bool scale = true;
-
-    uint8_t *fb[2];
-    size_t pitch;
-    int buf = 0;
-
-    for (i = 1; i < argc; i++) {
-        if (strcmp(argv[i], "--scale") == 0)
-            scale = true;
-        else
-            rom_file_name = argv[i];
-    }
-
-    if (!rom_file_name) {
-        printf("Syntax: %s [--scale] <ROM>\n", argv[0]);
-        return EXIT_FAILURE;
-    }
-
-    err = emu_create(&state, rom_file_name);
-
-    if (err != NULL)
-    {
-        printf("Peanut-GB failed to initialise: %s\n", err->errmess);
-        return EXIT_FAILURE;
-    }
-
-    if (scale)
-        setup_fullscreen(fb, &pitch, 27, 2);
-    else
-        setup_fullscreen(fb, &pitch, 12, 1);
-    emu_set_option(state, EMU_OPTION_SCALE, scale);
-
-    osbyte(osbyte_VAR_ESCAPE_STATE, 1, 0);
+    old_esc = osbyte1(osbyte_VAR_ESCAPE_STATE, 0xff, 0);
+    old_fn  = osbyte1(osbyte_VAR_INTERPRETATION_GROUP4, 0xc0, 0);
 
     while(emu_poll_input(state))
     {
         osbyte(osbyte_OUTPUT_SCREEN_BANK, buf+1, 0);
-        emu_update(state, fb[buf], pitch);
+        emu_update(state, fb[buf], pitch, vga);
         osbyte(osbyte_DISPLAY_SCREEN_BANK, buf+1, 0);
         buf ^= 1;
 
         osbyte(osbyte_AWAIT_VSYNC, 0, 0);
     }
 
-    osbyte(osbyte_VAR_ESCAPE_STATE, 0, 0);
+    osbyte(osbyte_VAR_ESCAPE_STATE, old_esc, 0);
+    osbyte(osbyte_VAR_INTERPRETATION_GROUP4, old_fn, 0);
 
-    emu_free(state);
-    return EXIT_SUCCESS;
+    wimp_set_mode((os_mode)oldmode);
+
+    return NULL;
 }

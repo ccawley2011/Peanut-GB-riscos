@@ -10,6 +10,8 @@
 /* Utility functions */
 
 static osbool quit = FALSE;
+static osbool vga = TRUE;
+static wimp_w menu_w;
 
 static void translate_menu(wimp_menu *menu) {
     wimp_menu_entry *entry = menu->entries;
@@ -104,6 +106,7 @@ void ibar_mouse_click(wimp_pointer *pointer)
     switch (pointer->buttons) {
     case wimp_CLICK_MENU:
         wimp_create_menu((wimp_menu *)&ibar_menu, pointer->pos.x - 64, 228);
+        menu_w = wimp_ICON_BAR;
         break;
     }
 }
@@ -240,6 +243,31 @@ bool update_factors(instance_t *instance, os_box *visible) {
 }
 
 
+static wimp_MENU(2) instance_menu = {
+    { "AppName" },
+    wimp_COLOUR_BLACK,
+    wimp_COLOUR_LIGHT_GREY,
+    wimp_COLOUR_BLACK,
+    wimp_COLOUR_WHITE,
+    16,
+    wimp_MENU_ITEM_HEIGHT,
+    wimp_MENU_ITEM_GAP,
+
+    { { 0, NULL, wimp_ICON_TEXT | wimp_ICON_FILLED |
+        (wimp_COLOUR_BLACK << wimp_ICON_FG_COLOUR_SHIFT) |
+        (wimp_COLOUR_WHITE << wimp_ICON_BG_COLOUR_SHIFT), { "fullscreen" } },
+
+      { wimp_MENU_TICKED | wimp_MENU_LAST, NULL, wimp_ICON_TEXT | wimp_ICON_FILLED |
+        (wimp_COLOUR_BLACK << wimp_ICON_FG_COLOUR_SHIFT) |
+        (wimp_COLOUR_WHITE << wimp_ICON_BG_COLOUR_SHIFT), { "vga" } } }
+};
+
+
+void instance_initialise(void) {
+    translate_menu((wimp_menu *)&instance_menu);
+}
+
+
 bool new_instance(const char *rom_file_name) {
     instance_t *instance = NULL;
     osspriteop_header *sprite;
@@ -254,7 +282,6 @@ bool new_instance(const char *rom_file_name) {
     err = emu_create(&instance->state, rom_file_name);
     if (err != NULL)
         goto cleanup;
-    emu_set_option(instance->state, EMU_OPTION_SCALE, false);
 
     /* TODO: Use mode 9 in the desktop? */
     instance->area = create_sprite(160*2, 144, os_MODE4BPP90X45);
@@ -313,6 +340,41 @@ instance_t *get_instance(wimp_w w) {
 }
 
 
+void instance_mouse_click(instance_t *instance, wimp_pointer *pointer)
+{
+    switch (pointer->buttons) {
+    case wimp_CLICK_MENU:
+        wimp_create_menu((wimp_menu *)&instance_menu, pointer->pos.x - 64, pointer->pos.y);
+        menu_w = instance->w;
+        break;
+    default:
+        wimp_set_caret_position(instance->w, wimp_ICON_WINDOW,
+                                0, 0, 1 << 25, 0);
+        break;
+    }
+}
+
+
+os_error *run_fullscreen(emu_state_t *state, osbool vga);
+
+void instance_menu_click(instance_t *instance, wimp_selection *selection)
+{
+    os_error *err;
+
+    switch (selection->items[0]) {
+    case 0:
+        err = run_fullscreen(instance->state, vga);
+        if (err != NULL) {
+            xwimp_report_error(err, wimp_ERROR_BOX_OK_ICON, msgs_lookup("AppName", NULL), NULL);
+        }
+        break;
+    case 1:
+        instance_menu.entries[1].menu_flags ^= wimp_MENU_TICKED;
+        vga = !vga;
+        break;
+    }
+}
+
 
 /* Main loop */
 
@@ -337,7 +399,7 @@ void gui_run(void)
             while (instance) {
                 if (instance == instance_focus)
                     emu_poll_input(instance->state);
-                emu_update(instance->state, instance->pixels, instance->pitch);
+                emu_update(instance->state, instance->pixels, instance->pitch, false);
                 update_sprite(instance->area, instance->id, &instance->factors, instance->trans_tab, instance->w);
                 instance = instance->next;
             }
@@ -376,15 +438,20 @@ void gui_run(void)
             } else {
                 instance_t *instance = get_instance(block.pointer.w);
                 if (instance) {
-                    wimp_set_caret_position(instance->w, wimp_ICON_WINDOW,
-                                            0, 0, 1 << 25, 0);
+                    instance_mouse_click(instance, &(block.pointer));
                 }
             }
             break;
 
         case wimp_MENU_SELECTION:
-            /* TODO: Add menu for instances */
-            ibar_menu_click(&(block.selection));
+            if (menu_w == wimp_ICON_BAR) {
+                ibar_menu_click(&(block.selection));
+            } else {
+                instance_t *instance = get_instance(menu_w);
+                if (instance) {
+                    instance_menu_click(instance, &(block.selection));
+                }
+            }
             break;
 
         case wimp_LOSE_CARET:
@@ -433,11 +500,12 @@ void gui_run(void)
     }
 }
 
-extern int gbmain(int argc, char **argv);
 
 int main(int argc, char **argv)
 {
     os_error *err;
+    int i;
+
     instance_base = NULL;
     quit = FALSE;
 
@@ -447,26 +515,22 @@ int main(int argc, char **argv)
         return EXIT_FAILURE;
     }
 
-    if (argc > 1) {
-        int retval = gbmain(argc, argv);
+    wimp_initialise(wimp_VERSION_RO2, msgs_lookup("AppName", NULL), NULL, NULL);
 
-        msgs_close();
+    wimp_open_template("<PeanutGB$Dir>.Templates");
 
-        return retval;
-    } else {
-        wimp_initialise(wimp_VERSION_RO2, msgs_lookup("AppName", NULL), NULL, NULL);
+    ibar_initialise();
+    instance_initialise();
 
-        wimp_open_template("<PeanutGB$Dir>.Templates");
+    for (i = 1; i < argc; i++)
+        new_instance(argv[i]);
 
-        ibar_initialise();
+    gui_run();
 
-        gui_run();
+    wimp_close_template();
+    wimp_close_down(0);
 
-        wimp_close_template();
-        wimp_close_down(0);
+    msgs_close();
 
-        msgs_close();
-
-        return EXIT_SUCCESS;
-    }
+    return EXIT_SUCCESS;
 }

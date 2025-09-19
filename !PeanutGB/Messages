@@ -4,7 +4,11 @@ info:Info
 help:Help
 quit:Quit
 
+fullscreen:Full screen
+vga:VGA
+
 nomem:Out of memory
+nomode:Screen mode %0 is not supported on this machine.
 
 gberr:%0 error occurred at address 0x%1. Exiting.
 erruk:UNKNOWN
