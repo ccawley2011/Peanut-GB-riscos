@@ -283,7 +283,7 @@ void free_instance(instance_t *instance) {
         while (next && next->next != instance)
             next = next->next;
         if (next)
-            next = instance->next;
+            next->next = instance->next;
     } else {
         instance_base = instance->next;
     }
