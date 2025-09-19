@@ -268,6 +268,36 @@ void instance_initialise(void) {
 }
 
 
+void free_instance(instance_t *instance) {
+    if (!instance)
+        return;
+
+    if (menu_w == instance->w)
+        menu_w = 0;
+
+    if (instance_focus == instance)
+        instance_focus = NULL;
+
+    if (instance_base != instance) {
+        instance_t *next = instance_base;
+        while (next && next->next != instance)
+            next = next->next;
+        if (next)
+            next = instance->next;
+    } else {
+        instance_base = instance->next;
+    }
+
+    if (instance->w)
+        wimp_delete_window(instance->w);
+    emu_free(instance->state);
+    free(instance->trans_tab);
+    free(instance->area);
+    free(instance->data);
+    free(instance);
+}
+
+
 bool new_instance(const char *rom_file_name) {
     instance_t *instance = NULL;
     osspriteop_header *sprite;
@@ -317,14 +347,7 @@ cleanup:
     if (err) {
         xwimp_report_error(err, wimp_ERROR_BOX_OK_ICON, msgs_lookup("AppName", NULL), NULL);
     }
-    if (instance) {
-        /* TODO: Delete the window! */
-        emu_free(instance->state);
-        free(instance->trans_tab);
-        free(instance->area);
-        free(instance->data);
-        free(instance);
-    }
+    free_instance(instance);
     return false;
 }
 
@@ -427,9 +450,14 @@ void gui_run(void)
             }
             break;
 
-        case wimp_CLOSE_WINDOW_REQUEST:
-            /* TODO: Delete instance data! */
-            wimp_close_window(block.close.w);
+        case wimp_CLOSE_WINDOW_REQUEST: {
+            instance_t *instance = get_instance(block.close.w);
+            if (instance) {
+                free_instance(instance);
+            } else {
+                wimp_close_window(block.close.w);
+            }
+            }
             break;
 
         case wimp_MOUSE_CLICK:
