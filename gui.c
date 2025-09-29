@@ -69,7 +69,7 @@ static wimp_MENU(3) ibar_menu = {
     wimp_COLOUR_LIGHT_GREY,
     wimp_COLOUR_BLACK,
     wimp_COLOUR_WHITE,
-    16,
+    16*8,
     wimp_MENU_ITEM_HEIGHT,
     wimp_MENU_ITEM_GAP,
 
@@ -249,7 +249,7 @@ static wimp_MENU(2) instance_menu = {
     wimp_COLOUR_LIGHT_GREY,
     wimp_COLOUR_BLACK,
     wimp_COLOUR_WHITE,
-    16,
+    16*12,
     wimp_MENU_ITEM_HEIGHT,
     wimp_MENU_ITEM_GAP,
 
